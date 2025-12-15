@@ -1,0 +1,48 @@
+//
+//  InfoRow.swift
+//  VistaVault
+//
+//  Created by Asad ur Rehman on 06/11/1446 AH.
+//
+
+import SwiftUI
+
+struct InfoRow: View {
+    let label: LocalizedStringKey
+    let value: String
+    var type: DataType = .generic
+    var locked: Bool = false
+    
+    enum DataType {
+        case phone, address, generic
+    }
+    
+    var body: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Text(value)
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .accessibilityLabel(Text("\(label), \(value)"))
+                
+                if locked {
+                    Text("Locked After Setup", comment: "Lock indicator")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            if type == .address {
+                Image(systemName: "map")
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
