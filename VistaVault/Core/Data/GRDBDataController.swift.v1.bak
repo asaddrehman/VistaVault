@@ -1,0 +1,322 @@
+import Foundation
+import GRDB
+
+@MainActor
+class GRDBDataController {
+    static let shared = GRDBDataController()
+    
+    private(set) var dbQueue: DatabaseQueue!
+    
+    private init() {
+        do {
+            let fileManager = FileManager.default
+            let folderURL = try fileManager
+                .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                .appendingPathComponent("VistaVault", isDirectory: true)
+            
+            try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
+            let dbURL = folderURL.appendingPathComponent("vistavault.sqlite")
+            
+            dbQueue = try DatabaseQueue(path: dbURL.path)
+            try migrator.migrate(dbQueue)
+        } catch {
+            fatalError("Could not create DatabaseQueue: \(error)")
+        }
+    }
+    
+    // MARK: - Database Migration
+    
+    private var migrator: DatabaseMigrator {
+        var migrator = DatabaseMigrator()
+        
+        // Migration v1: Initial schema
+        migrator.registerMigration("v1") { db in
+            // Users table
+            try db.create(table: "users") { t in
+                t.column("id", .text).primaryKey()
+                t.column("email", .text).notNull().unique()
+                t.column("passwordHash", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            
+            // Company profiles table
+            try db.create(table: "company_profiles") { t in
+                t.column("id", .text).primaryKey()
+                t.column("name", .text).notNull()
+                t.column("mobile", .text).notNull()
+                t.column("crNumber", .text).notNull()
+                t.column("address", .text).notNull()
+                t.column("currencyCode", .text).notNull()
+                t.column("currencySymbol", .text).notNull()
+                t.column("numberFormat", .text).notNull()
+                t.column("isSetupComplete", .boolean).notNull()
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Chart of accounts table
+            try db.create(table: "chart_of_accounts") { t in
+                t.column("id", .text).primaryKey()
+                t.column("accountCode", .text).notNull()
+                t.column("accountName", .text).notNull()
+                t.column("accountTypeRaw", .text).notNull()
+                t.column("parentAccountId", .text)
+                t.column("balance", .double).notNull()
+                t.column("isActive", .boolean).notNull()
+                t.column("accountDescription", .text)
+                t.column("level", .integer).notNull()
+                t.column("createdAt", .datetime)
+                t.column("updatedAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Business partners table
+            try db.create(table: "business_partners") { t in
+                t.column("id", .text).primaryKey()
+                t.column("partnerCode", .text).notNull()
+                t.column("name", .text).notNull()
+                t.column("typeRaw", .text).notNull()
+                t.column("balance", .double).notNull()
+                t.column("lastTransactionDate", .datetime).notNull()
+                t.column("accountId", .text).notNull()
+                t.column("firstName", .text)
+                t.column("lastName", .text)
+                t.column("email", .text)
+                t.column("phone", .text)
+                t.column("mobile", .text)
+                t.column("website", .text)
+                t.column("address", .text)
+                t.column("city", .text)
+                t.column("state", .text)
+                t.column("postalCode", .text)
+                t.column("country", .text)
+                t.column("taxId", .text)
+                t.column("vatNumber", .text)
+                t.column("creditLimit", .double)
+                t.column("paymentTerms", .integer)
+                t.column("discount", .double)
+                t.column("isActive", .boolean).notNull()
+                t.column("notes", .text)
+                t.column("createdAt", .datetime)
+                t.column("updatedAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Sales table
+            try db.create(table: "sales") { t in
+                t.column("id", .text).primaryKey()
+                t.column("saleNumber", .text).notNull()
+                t.column("customerId", .text).notNull()
+                t.column("customerName", .text).notNull()
+                t.column("saleDate", .datetime).notNull()
+                t.column("dueDate", .datetime)
+                t.column("statusRaw", .text).notNull()
+                t.column("subtotal", .double).notNull()
+                t.column("taxAmount", .double).notNull()
+                t.column("discountAmount", .double).notNull()
+                t.column("totalAmount", .double).notNull()
+                t.column("paidAmount", .double).notNull()
+                t.column("notes", .text)
+                t.column("paymentMethod", .text)
+                t.column("referenceNumber", .text)
+                t.column("createdAt", .datetime)
+                t.column("updatedAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Sale items table
+            try db.create(table: "sale_items") { t in
+                t.column("id", .text).primaryKey()
+                t.column("itemId", .text).notNull()
+                t.column("itemName", .text).notNull()
+                t.column("itemDescription", .text)
+                t.column("quantity", .double).notNull()
+                t.column("unitPrice", .double).notNull()
+                t.column("taxRate", .double).notNull()
+                t.column("discountPercent", .double).notNull()
+                t.column("saleId", .text).references("sales", onDelete: .cascade)
+            }
+            
+            // Purchases table
+            try db.create(table: "purchases") { t in
+                t.column("id", .text).primaryKey()
+                t.column("purchaseNumber", .text).notNull()
+                t.column("vendorId", .text).notNull()
+                t.column("vendorName", .text).notNull()
+                t.column("purchaseDate", .datetime).notNull()
+                t.column("dueDate", .datetime)
+                t.column("statusRaw", .text).notNull()
+                t.column("subtotal", .double).notNull()
+                t.column("taxAmount", .double).notNull()
+                t.column("discountAmount", .double).notNull()
+                t.column("totalAmount", .double).notNull()
+                t.column("paidAmount", .double).notNull()
+                t.column("notes", .text)
+                t.column("paymentMethod", .text)
+                t.column("referenceNumber", .text)
+                t.column("createdAt", .datetime)
+                t.column("updatedAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Purchase items table
+            try db.create(table: "purchase_items") { t in
+                t.column("id", .text).primaryKey()
+                t.column("itemId", .text).notNull()
+                t.column("itemName", .text).notNull()
+                t.column("itemDescription", .text)
+                t.column("quantity", .double).notNull()
+                t.column("unitPrice", .double).notNull()
+                t.column("taxRate", .double).notNull()
+                t.column("discountPercent", .double).notNull()
+                t.column("purchaseId", .text).references("purchases", onDelete: .cascade)
+            }
+            
+            // Inventory items table
+            try db.create(table: "inventory_items") { t in
+                t.column("id", .text).primaryKey()
+                t.column("productCode", .text).notNull()
+                t.column("name", .text).notNull()
+                t.column("itemDescription", .text).notNull()
+                t.column("displayName", .text).notNull()
+                t.column("unitId", .text).notNull()
+                t.column("valuationClassId", .text)
+                t.column("salesPrice", .double).notNull()
+                t.column("purchasePrice", .double).notNull()
+                t.column("availableQuantity", .integer).notNull()
+                t.column("timestamp", .datetime).notNull()
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Units table
+            try db.create(table: "units") { t in
+                t.column("id", .text).primaryKey()
+                t.column("name", .text).notNull()
+                t.column("unitDescription", .text).notNull()
+                t.column("created", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Valuation classes table
+            try db.create(table: "valuation_classes") { t in
+                t.column("id", .text).primaryKey()
+                t.column("classCode", .text).notNull()
+                t.column("name", .text).notNull()
+                t.column("classDescription", .text)
+                t.column("inventoryAccountId", .text).notNull()
+                t.column("cogsAccountId", .text).notNull()
+                t.column("isActive", .boolean).notNull()
+                t.column("createdAt", .datetime)
+                t.column("updatedAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Invoices table
+            try db.create(table: "invoices") { t in
+                t.column("id", .text).primaryKey()
+                t.column("invoiceNumber", .text).notNull()
+                t.column("customerId", .text).notNull()
+                t.column("customerName", .text).notNull()
+                t.column("invoiceDate", .datetime).notNull()
+                t.column("totalAmount", .double).notNull()
+                t.column("createdAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Invoice items table
+            try db.create(table: "invoice_items") { t in
+                t.column("id", .text).primaryKey()
+                t.column("name", .text).notNull()
+                t.column("quantity", .integer).notNull()
+                t.column("unitPrice", .double).notNull()
+                t.column("invoiceId", .text).references("invoices", onDelete: .cascade)
+            }
+            
+            // Journal entries table
+            try db.create(table: "journal_entries") { t in
+                t.column("id", .text).primaryKey()
+                t.column("entryNumber", .text).notNull()
+                t.column("date", .datetime).notNull()
+                t.column("entryDescription", .text).notNull()
+                t.column("createdAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Journal line items table
+            try db.create(table: "journal_line_items") { t in
+                t.column("id", .text).primaryKey()
+                t.column("accountId", .text).notNull()
+                t.column("accountName", .text).notNull()
+                t.column("typeRaw", .text).notNull()
+                t.column("amount", .double).notNull()
+                t.column("memo", .text)
+                t.column("journalEntryId", .text).references("journal_entries", onDelete: .cascade)
+            }
+            
+            // Incoming payments table
+            try db.create(table: "incoming_payments") { t in
+                t.column("id", .text).primaryKey()
+                t.column("paymentNumber", .text).notNull()
+                t.column("amount", .double).notNull()
+                t.column("date", .datetime).notNull()
+                t.column("customerId", .text).notNull()
+                t.column("customerName", .text).notNull()
+                t.column("receivedInAccountId", .text).notNull()
+                t.column("notes", .text)
+                t.column("referenceNumber", .text)
+                t.column("createdAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+            
+            // Outgoing payments table
+            try db.create(table: "outgoing_payments") { t in
+                t.column("id", .text).primaryKey()
+                t.column("paymentNumber", .text).notNull()
+                t.column("amount", .double).notNull()
+                t.column("date", .datetime).notNull()
+                t.column("vendorId", .text).notNull()
+                t.column("vendorName", .text).notNull()
+                t.column("paidFromAccountId", .text).notNull()
+                t.column("notes", .text)
+                t.column("referenceNumber", .text)
+                t.column("createdAt", .datetime)
+                t.column("userId", .text).references("users", onDelete: .cascade)
+            }
+        }
+        
+        return migrator
+    }
+    
+    // MARK: - User Management
+    
+    func createUser(email: String, passwordHash: String) throws -> User {
+        let user = User(id: UUID().uuidString, email: email, passwordHash: passwordHash, createdAt: Date())
+        try dbQueue.write { db in
+            try user.insert(db)
+        }
+        return user
+    }
+    
+    func fetchUser(byEmail email: String) throws -> User? {
+        try dbQueue.read { db in
+            try User.filter(Column("email") == email).fetchOne(db)
+        }
+    }
+    
+    func fetchUser(byId id: String) throws -> User? {
+        try dbQueue.read { db in
+            try User.filter(Column("id") == id).fetchOne(db)
+        }
+    }
+    
+    func deleteAllData() throws {
+        try dbQueue.write { db in
+            try User.deleteAll(db)
+        }
+    }
+    
+    // MARK: - Save Context
+    
+    func save() throws {
+        // GRDB auto-saves on write transactions, no explicit save needed
+    }
+}

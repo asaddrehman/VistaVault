@@ -1,0 +1,728 @@
+import Foundation
+import SwiftData
+
+// MARK: - User Model
+
+@Model
+final class User {
+    @Attribute(.unique) var id: String
+    var email: String
+    var passwordHash: String
+    var createdAt: Date
+
+    @Relationship(deleteRule: .cascade, inverse: \CompanyProfileData.user)
+    var companyProfile: CompanyProfileData?
+
+    @Relationship(deleteRule: .cascade, inverse: \ChartOfAccountData.user)
+    var chartOfAccounts: [ChartOfAccountData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \BusinessPartnerData.user)
+    var businessPartners: [BusinessPartnerData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \SaleData.user)
+    var sales: [SaleData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \PurchaseData.user)
+    var purchases: [PurchaseData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \InventoryItemData.user)
+    var inventoryItems: [InventoryItemData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \UnitData.user)
+    var units: [UnitData]?
+    
+    @Relationship(deleteRule: .cascade, inverse: \ValuationClassData.user)
+    var valuationClasses: [ValuationClassData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \IncomingPaymentData.user)
+    var incomingPayments: [IncomingPaymentData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \OutgoingPaymentData.user)
+    var outgoingPayments: [OutgoingPaymentData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \InvoiceData.user)
+    var invoices: [InvoiceData]?
+
+    @Relationship(deleteRule: .cascade, inverse: \JournalEntryData.user)
+    var journalEntries: [JournalEntryData]?
+
+    init(id: String, email: String, passwordHash: String, createdAt: Date = Date()) {
+        self.id = id
+        self.email = email
+        self.passwordHash = passwordHash
+        self.createdAt = createdAt
+    }
+}
+
+// MARK: - Company Profile
+
+@Model
+final class CompanyProfileData {
+    @Attribute(.unique) var id: String
+    var name: String
+    var mobile: String
+    var crNumber: String
+    var address: String
+    var currencyCode: String
+    var currencySymbol: String
+    var numberFormat: String
+    var isSetupComplete: Bool
+
+    var user: User?
+
+    init(
+        id: String,
+        name: String,
+        mobile: String,
+        crNumber: String,
+        address: String,
+        currencyCode: String,
+        currencySymbol: String,
+        numberFormat: String,
+        isSetupComplete: Bool
+    ) {
+        self.id = id
+        self.name = name
+        self.mobile = mobile
+        self.crNumber = crNumber
+        self.address = address
+        self.currencyCode = currencyCode
+        self.currencySymbol = currencySymbol
+        self.numberFormat = numberFormat
+        self.isSetupComplete = isSetupComplete
+    }
+}
+
+// MARK: - Chart of Account
+
+@Model
+final class ChartOfAccountData {
+    @Attribute(.unique) var id: String
+    var accountCode: String
+    var accountName: String
+    var accountTypeRaw: String
+    var parentAccountId: String?
+    var balance: Double
+    var isActive: Bool
+    var accountDescription: String?
+    var level: Int
+    var createdAt: Date?
+    var updatedAt: Date?
+
+    var user: User?
+
+    init(
+        id: String,
+        accountCode: String,
+        accountName: String,
+        accountTypeRaw: String,
+        parentAccountId: String?,
+        balance: Double,
+        isActive: Bool,
+        accountDescription: String?,
+        level: Int,
+        createdAt: Date?,
+        updatedAt: Date?
+    ) {
+        self.id = id
+        self.accountCode = accountCode
+        self.accountName = accountName
+        self.accountTypeRaw = accountTypeRaw
+        self.parentAccountId = parentAccountId
+        self.balance = balance
+        self.isActive = isActive
+        self.accountDescription = accountDescription
+        self.level = level
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+// MARK: - Business Partner
+
+@Model
+final class BusinessPartnerData {
+    @Attribute(.unique) var id: String
+    var partnerCode: String
+    var name: String
+    var typeRaw: String
+    var balance: Double
+    var lastTransactionDate: Date
+    var accountId: String
+    var firstName: String?
+    var lastName: String?
+    var email: String?
+    var phone: String?
+    var mobile: String?
+    var website: String?
+    var address: String?
+    var city: String?
+    var state: String?
+    var postalCode: String?
+    var country: String?
+    var taxId: String?
+    var vatNumber: String?
+    var creditLimit: Double?
+    var paymentTerms: Int?
+    var discount: Double?
+    var isActive: Bool
+    var notes: String?
+    var createdAt: Date?
+    var updatedAt: Date?
+
+    var user: User?
+
+    init(
+        id: String,
+        partnerCode: String,
+        name: String,
+        typeRaw: String,
+        balance: Double,
+        lastTransactionDate: Date,
+        accountId: String,
+        firstName: String?,
+        lastName: String?,
+        email: String?,
+        phone: String?,
+        mobile: String?,
+        website: String?,
+        address: String?,
+        city: String?,
+        state: String?,
+        postalCode: String?,
+        country: String?,
+        taxId: String?,
+        vatNumber: String?,
+        creditLimit: Double?,
+        paymentTerms: Int?,
+        discount: Double?,
+        isActive: Bool,
+        notes: String?,
+        createdAt: Date?,
+        updatedAt: Date?
+    ) {
+        self.id = id
+        self.partnerCode = partnerCode
+        self.name = name
+        self.typeRaw = typeRaw
+        self.balance = balance
+        self.lastTransactionDate = lastTransactionDate
+        self.accountId = accountId
+        self.firstName = firstName
+        self.lastName = lastName
+        self.email = email
+        self.phone = phone
+        self.mobile = mobile
+        self.website = website
+        self.address = address
+        self.city = city
+        self.state = state
+        self.postalCode = postalCode
+        self.country = country
+        self.taxId = taxId
+        self.vatNumber = vatNumber
+        self.creditLimit = creditLimit
+        self.paymentTerms = paymentTerms
+        self.discount = discount
+        self.isActive = isActive
+        self.notes = notes
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+// MARK: - Sale
+
+@Model
+final class SaleData {
+    @Attribute(.unique) var id: String
+    var saleNumber: String
+    var customerId: String
+    var customerName: String
+    var saleDate: Date
+    var dueDate: Date?
+    var statusRaw: String
+    var subtotal: Double
+    var taxAmount: Double
+    var discountAmount: Double
+    var totalAmount: Double
+    var paidAmount: Double
+    var notes: String?
+    var paymentMethod: String?
+    var referenceNumber: String?
+    var createdAt: Date?
+    var updatedAt: Date?
+
+    var user: User?
+
+    @Relationship(deleteRule: .cascade, inverse: \SaleItemData.sale)
+    var items: [SaleItemData]?
+
+    init(
+        id: String,
+        saleNumber: String,
+        customerId: String,
+        customerName: String,
+        saleDate: Date,
+        dueDate: Date?,
+        statusRaw: String,
+        subtotal: Double,
+        taxAmount: Double,
+        discountAmount: Double,
+        totalAmount: Double,
+        paidAmount: Double,
+        notes: String?,
+        paymentMethod: String?,
+        referenceNumber: String?,
+        createdAt: Date?,
+        updatedAt: Date?
+    ) {
+        self.id = id
+        self.saleNumber = saleNumber
+        self.customerId = customerId
+        self.customerName = customerName
+        self.saleDate = saleDate
+        self.dueDate = dueDate
+        self.statusRaw = statusRaw
+        self.subtotal = subtotal
+        self.taxAmount = taxAmount
+        self.discountAmount = discountAmount
+        self.totalAmount = totalAmount
+        self.paidAmount = paidAmount
+        self.notes = notes
+        self.paymentMethod = paymentMethod
+        self.referenceNumber = referenceNumber
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+@Model
+final class SaleItemData {
+    @Attribute(.unique) var id: String
+    var itemId: String
+    var itemName: String
+    var itemDescription: String?
+    var quantity: Double
+    var unitPrice: Double
+    var taxRate: Double
+    var discountPercent: Double
+
+    var sale: SaleData?
+
+    init(
+        id: String,
+        itemId: String,
+        itemName: String,
+        itemDescription: String?,
+        quantity: Double,
+        unitPrice: Double,
+        taxRate: Double,
+        discountPercent: Double
+    ) {
+        self.id = id
+        self.itemId = itemId
+        self.itemName = itemName
+        self.itemDescription = itemDescription
+        self.quantity = quantity
+        self.unitPrice = unitPrice
+        self.taxRate = taxRate
+        self.discountPercent = discountPercent
+    }
+}
+
+// MARK: - Purchase
+
+@Model
+final class PurchaseData {
+    @Attribute(.unique) var id: String
+    var purchaseNumber: String
+    var vendorId: String
+    var vendorName: String
+    var purchaseDate: Date
+    var dueDate: Date?
+    var statusRaw: String
+    var subtotal: Double
+    var taxAmount: Double
+    var discountAmount: Double
+    var totalAmount: Double
+    var paidAmount: Double
+    var notes: String?
+    var paymentMethod: String?
+    var referenceNumber: String?
+    var createdAt: Date?
+    var updatedAt: Date?
+
+    var user: User?
+
+    @Relationship(deleteRule: .cascade, inverse: \PurchaseItemData.purchase)
+    var items: [PurchaseItemData]?
+
+    init(
+        id: String,
+        purchaseNumber: String,
+        vendorId: String,
+        vendorName: String,
+        purchaseDate: Date,
+        dueDate: Date?,
+        statusRaw: String,
+        subtotal: Double,
+        taxAmount: Double,
+        discountAmount: Double,
+        totalAmount: Double,
+        paidAmount: Double,
+        notes: String?,
+        paymentMethod: String?,
+        referenceNumber: String?,
+        createdAt: Date?,
+        updatedAt: Date?
+    ) {
+        self.id = id
+        self.purchaseNumber = purchaseNumber
+        self.vendorId = vendorId
+        self.vendorName = vendorName
+        self.purchaseDate = purchaseDate
+        self.dueDate = dueDate
+        self.statusRaw = statusRaw
+        self.subtotal = subtotal
+        self.taxAmount = taxAmount
+        self.discountAmount = discountAmount
+        self.totalAmount = totalAmount
+        self.paidAmount = paidAmount
+        self.notes = notes
+        self.paymentMethod = paymentMethod
+        self.referenceNumber = referenceNumber
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+@Model
+final class PurchaseItemData {
+    @Attribute(.unique) var id: String
+    var itemId: String
+    var itemName: String
+    var itemDescription: String?
+    var quantity: Double
+    var unitPrice: Double
+    var taxRate: Double
+    var discountPercent: Double
+
+    var purchase: PurchaseData?
+
+    init(
+        id: String,
+        itemId: String,
+        itemName: String,
+        itemDescription: String?,
+        quantity: Double,
+        unitPrice: Double,
+        taxRate: Double,
+        discountPercent: Double
+    ) {
+        self.id = id
+        self.itemId = itemId
+        self.itemName = itemName
+        self.itemDescription = itemDescription
+        self.quantity = quantity
+        self.unitPrice = unitPrice
+        self.taxRate = taxRate
+        self.discountPercent = discountPercent
+    }
+}
+
+// MARK: - Inventory
+
+@Model
+final class InventoryItemData {
+    @Attribute(.unique) var id: String
+    var productCode: String
+    var name: String
+    var itemDescription: String
+    var displayName: String
+    var unitId: String
+    var valuationClassId: String?
+    var salesPrice: Double
+    var purchasePrice: Double
+    var availableQuantity: Int
+    var timestamp: Date
+
+    var user: User?
+
+    init(
+        id: String,
+        productCode: String,
+        name: String,
+        itemDescription: String,
+        displayName: String,
+        unitId: String,
+        valuationClassId: String?,
+        salesPrice: Double,
+        purchasePrice: Double,
+        availableQuantity: Int,
+        timestamp: Date
+    ) {
+        self.id = id
+        self.productCode = productCode
+        self.name = name
+        self.itemDescription = itemDescription
+        self.displayName = displayName
+        self.unitId = unitId
+        self.valuationClassId = valuationClassId
+        self.salesPrice = salesPrice
+        self.purchasePrice = purchasePrice
+        self.availableQuantity = availableQuantity
+        self.timestamp = timestamp
+    }
+}
+
+@Model
+final class UnitData {
+    @Attribute(.unique) var id: String
+    var name: String
+    var unitDescription: String
+    var created: Date?
+
+    var user: User?
+
+    init(id: String, name: String, unitDescription: String, created: Date?) {
+        self.id = id
+        self.name = name
+        self.unitDescription = unitDescription
+        self.created = created
+    }
+}
+
+// MARK: - Valuation Class
+
+@Model
+final class ValuationClassData {
+    @Attribute(.unique) var id: String
+    var classCode: String
+    var name: String
+    var classDescription: String?
+    var inventoryAccountId: String
+    var cogsAccountId: String
+    var isActive: Bool
+    var createdAt: Date?
+    var updatedAt: Date?
+    
+    var user: User?
+    
+    init(
+        id: String,
+        classCode: String,
+        name: String,
+        classDescription: String?,
+        inventoryAccountId: String,
+        cogsAccountId: String,
+        isActive: Bool,
+        createdAt: Date?,
+        updatedAt: Date?
+    ) {
+        self.id = id
+        self.classCode = classCode
+        self.name = name
+        self.classDescription = classDescription
+        self.inventoryAccountId = inventoryAccountId
+        self.cogsAccountId = cogsAccountId
+        self.isActive = isActive
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+// MARK: - Invoice
+
+@Model
+final class InvoiceData {
+    @Attribute(.unique) var id: String
+    var invoiceNumber: String
+    var customerId: String
+    var customerName: String
+    var invoiceDate: Date
+    var totalAmount: Double
+    var createdAt: Date?
+
+    var user: User?
+
+    @Relationship(deleteRule: .cascade, inverse: \InvoiceItemData.invoice)
+    var items: [InvoiceItemData]?
+
+    init(
+        id: String,
+        invoiceNumber: String,
+        customerId: String,
+        customerName: String,
+        invoiceDate: Date,
+        totalAmount: Double,
+        createdAt: Date?
+    ) {
+        self.id = id
+        self.invoiceNumber = invoiceNumber
+        self.customerId = customerId
+        self.customerName = customerName
+        self.invoiceDate = invoiceDate
+        self.totalAmount = totalAmount
+        self.createdAt = createdAt
+    }
+}
+
+@Model
+final class InvoiceItemData {
+    @Attribute(.unique) var id: String
+    var name: String
+    var quantity: Int
+    var unitPrice: Double
+
+    var invoice: InvoiceData?
+
+    init(id: String, name: String, quantity: Int, unitPrice: Double) {
+        self.id = id
+        self.name = name
+        self.quantity = quantity
+        self.unitPrice = unitPrice
+    }
+}
+
+// MARK: - Journal Entry
+
+@Model
+final class JournalEntryData {
+    @Attribute(.unique) var id: String
+    var entryNumber: String
+    var date: Date
+    var entryDescription: String
+    var createdAt: Date?
+
+    var user: User?
+
+    @Relationship(deleteRule: .cascade, inverse: \JournalLineItemData.journalEntry)
+    var lineItems: [JournalLineItemData]?
+
+    init(
+        id: String,
+        entryNumber: String,
+        date: Date,
+        entryDescription: String,
+        createdAt: Date?
+    ) {
+        self.id = id
+        self.entryNumber = entryNumber
+        self.date = date
+        self.entryDescription = entryDescription
+        self.createdAt = createdAt
+    }
+}
+
+@Model
+final class JournalLineItemData {
+    @Attribute(.unique) var id: String
+    var accountId: String
+    var accountName: String
+    var typeRaw: String
+    var amount: Double
+    var memo: String?
+
+    var journalEntry: JournalEntryData?
+
+    init(
+        id: String,
+        accountId: String,
+        accountName: String,
+        typeRaw: String,
+        amount: Double,
+        memo: String?
+    ) {
+        self.id = id
+        self.accountId = accountId
+        self.accountName = accountName
+        self.typeRaw = typeRaw
+        self.amount = amount
+        self.memo = memo
+    }
+}
+
+// MARK: - Incoming Payment
+
+@Model
+final class IncomingPaymentData {
+    @Attribute(.unique) var id: String
+    var paymentNumber: String
+    var amount: Double
+    var date: Date
+    var customerId: String
+    var customerName: String
+    var receivedInAccountId: String
+    var notes: String?
+    var referenceNumber: String?
+    var createdAt: Date?
+    
+    var user: User?
+    
+    init(
+        id: String,
+        paymentNumber: String,
+        amount: Double,
+        date: Date,
+        customerId: String,
+        customerName: String,
+        receivedInAccountId: String,
+        notes: String?,
+        referenceNumber: String?,
+        createdAt: Date?
+    ) {
+        self.id = id
+        self.paymentNumber = paymentNumber
+        self.amount = amount
+        self.date = date
+        self.customerId = customerId
+        self.customerName = customerName
+        self.receivedInAccountId = receivedInAccountId
+        self.notes = notes
+        self.referenceNumber = referenceNumber
+        self.createdAt = createdAt
+    }
+}
+
+// MARK: - Outgoing Payment
+
+@Model
+final class OutgoingPaymentData {
+    @Attribute(.unique) var id: String
+    var paymentNumber: String
+    var amount: Double
+    var date: Date
+    var vendorId: String
+    var vendorName: String
+    var paidFromAccountId: String
+    var notes: String?
+    var referenceNumber: String?
+    var createdAt: Date?
+    
+    var user: User?
+    
+    init(
+        id: String,
+        paymentNumber: String,
+        amount: Double,
+        date: Date,
+        vendorId: String,
+        vendorName: String,
+        paidFromAccountId: String,
+        notes: String?,
+        referenceNumber: String?,
+        createdAt: Date?
+    ) {
+        self.id = id
+        self.paymentNumber = paymentNumber
+        self.amount = amount
+        self.date = date
+        self.vendorId = vendorId
+        self.vendorName = vendorName
+        self.paidFromAccountId = paidFromAccountId
+        self.notes = notes
+        self.referenceNumber = referenceNumber
+        self.createdAt = createdAt
+    }
+}

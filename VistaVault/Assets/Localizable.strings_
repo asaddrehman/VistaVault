@@ -1,0 +1,24 @@
+/* Profile View */
+"profile.title" = "Company Profile";
+"profile.edit_button" = "Edit Profile";
+"profile.logout_button" = "Log Out";
+"profile.logout_confirmation" = "Are you sure you want to log out?";
+"profile.loading" = "Loading profile...";
+"profile.error.not_found" = "Profile not found";
+
+/* Section Headers */
+"profile.section.company" = "Company Details";
+"profile.section.legal" = "Legal";
+
+/* Info Labels */
+"profile.label.name" = "Organization Name";
+"profile.label.mobile" = "Contact Number";
+"profile.label.cr" = "CR Number";
+"profile.label.address" = "Business Address";
+"profile.label.currency" = "Currency";
+"profile.label.number_format" = "Number Format";
+
+/* Legal Links */
+"legal.terms" = "Terms of Service";
+"legal.privacy" = "Privacy Policy";
+"legal.licenses" = "Business Licenses";

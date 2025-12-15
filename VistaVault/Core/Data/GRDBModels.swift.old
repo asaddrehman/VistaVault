@@ -1,0 +1,685 @@
+import Foundation
+import GRDB
+
+// MARK: - Enums
+
+enum TransactionType: String, Codable {
+    case bill = "BILL"              // Vendor Invoice (Accounts Payable)
+    case billPayment = "PAY"        // Vendor Payment (Accounts Payable)
+    case invoice = "INV"            // Customer Invoice (Accounts Receivable)
+    case receipt = "REC"            // Customer Payment (Accounts Receivable)
+    case generalJournal = "JE"      // G/L Account Document
+    case systemPosting = "SP"       // System Generated
+}
+
+enum OpenItemStatus: String, Codable {
+    case open = "Open"
+    case cleared = "Cleared"
+    case revalued = "Revalued"
+}
+
+enum BusinessPartnerType: String, Codable {
+    case organization = "ORG"
+    case person = "PER"
+    case group = "GRP"
+}
+
+enum AccountType: String, Codable {
+    case asset = "Asset"
+    case liability = "Liability"
+    case equity = "Equity"
+    case income = "Income"
+    case expense = "Expense"
+}
+
+enum DebitCreditIndicator: String, Codable {
+    case debit = "D"
+    case credit = "C"
+}
+
+enum ReconciliationAccountType: String, Codable {
+    case customer = "D"     // Debtor
+    case vendor = "K"       // Kreditor
+    case asset = "A"
+    case general = "G"
+}
+
+// MARK: - User Model (V2 - ERP Structure)
+
+struct UserV2: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var email: String
+    var passwordHash: String
+    var createdAt: Date
+    
+    static let databaseTableName = "users_v2"
+    
+    // Define relationships
+    static let companyProfile = hasOne(CompanyProfileDataV2.self)
+    static let businessPartners = hasMany(BusinessPartnerDataV2.self)
+    static let transactions = hasMany(TransactionData.self)
+}
+
+// MARK: - Company Profile (V2)
+
+struct CompanyProfileDataV2: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var name: String
+    var mobile: String
+    var crNumber: String
+    var address: String
+    var currencyCode: String
+    var currencySymbol: String
+    var numberFormat: String
+    var isSetupComplete: Bool
+    var userId: String?
+    
+    static let databaseTableName = "company_profiles_v2"
+    static let user = belongsTo(UserV2.self)
+}
+
+// MARK: - Company Code
+
+struct CompanyCode: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var code: String
+    var name: String
+    var currencyCode: String
+    var userId: String?
+    
+    static let databaseTableName = "company_codes"
+    static let user = belongsTo(UserV2.self)
+    static let accounts = hasMany(Account.self)
+}
+
+// MARK: - Chart of Accounts
+
+struct ChartOfAccounts: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var code: String
+    var name: String
+    var description: String?
+    var userId: String?
+    
+    static let databaseTableName = "chart_of_accounts"
+    static let user = belongsTo(UserV2.self)
+    static let accounts = hasMany(Account.self)
+}
+
+// MARK: - Account (G/L Account Master Data)
+
+struct Account: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var code: String
+    var name: String
+    var chartOfAccountsId: Int64
+    var companyCodeId: Int64
+    var type: String                        // AccountType enum stored as string
+    var accountCategory: String             // User-defined category
+    var debitCreditIndicator: String        // 'D' or 'C' for normal balance
+    var isOpenItemManaged: Bool
+    var reconciliationAccountType: String?  // 'D', 'K', 'A', 'G'
+    var isCostElement: Bool
+    var costElementCategory: String?
+    var postingBlock: Bool
+    var isOnlyLocalCurrency: Bool
+    var userId: String?
+    
+    static let databaseTableName = "accounts"
+    
+    static let chartOfAccounts = belongsTo(ChartOfAccounts.self)
+    static let companyCode = belongsTo(CompanyCode.self)
+    static let user = belongsTo(UserV2.self)
+    static let transactions = hasMany(TransactionData.self)
+}
+
+// MARK: - Business Partner (V2)
+
+struct BusinessPartnerDataV2: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var partnerCode: String
+    var name: String
+    var typeRaw: String                     // BusinessPartnerType enum
+    var partnerType: String                  // 'ORG', 'PER', 'GRP'
+    var balance: Double
+    var lastTransactionDate: Date
+    var reconciliationAccountId: Int64?     // Link to G/L Account
+    var firstName: String?
+    var lastName: String?
+    var email: String?
+    var phone: String?
+    var mobile: String?
+    var website: String?
+    var address: String?
+    var city: String?
+    var state: String?
+    var postalCode: String?
+    var country: String?
+    var taxId: String?
+    var vatNumber: String?
+    var creditLimit: Double?
+    var paymentTerms: Int?
+    var discount: Double?
+    var isActive: Bool
+    var notes: String?
+    var createdAt: Date?
+    var updatedAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "business_partners_v2"
+    static let user = belongsTo(UserV2.self)
+    static let reconciliationAccount = belongsTo(Account.self)
+}
+
+// MARK: - Transaction (Financial Document Header - BKPF)
+
+struct TransactionData: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var documentNumber: Int
+    var date: Date                          // Document date
+    var postingDate: Date                   // Posting date
+    var companyCodeId: Int64
+    var transactionType: String             // TransactionType enum (JE, BILL, PAY, INV, REC, SP)
+    var currencyCode: String?
+    var exchangeRate: Double
+    var exchangeRateTypeId: Int64?
+    var isPosted: Bool
+    var postedBy: Int64?                    // User who posted
+    var reversesTransactionId: Int64?       // ID of transaction this reverses
+    var userId: String?
+    
+    static let databaseTableName = "transactions"
+    
+    static let user = belongsTo(UserV2.self)
+    static let companyCode = belongsTo(CompanyCode.self)
+    static let journalEntries = hasMany(JournalEntryDataV2.self)
+    static let postedByUser = belongsTo(UserV2.self, key: "postedBy")
+    static let reversedTransaction = belongsTo(TransactionData.self, key: "reversesTransactionId")
+}
+
+// MARK: - Posting Key
+
+struct PostingKey: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var code: String
+    var name: String
+    var isDebit: Bool                       // True = Debit, False = Credit
+    var accountType: String?                // For validation
+    
+    static let databaseTableName = "posting_keys"
+}
+
+// MARK: - Cost Center
+
+struct CostCenter: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var code: String
+    var name: String
+    var description: String?
+    var isActive: Bool
+    var userId: String?
+    
+    static let databaseTableName = "cost_centers"
+    static let user = belongsTo(UserV2.self)
+}
+
+// MARK: - Profit Center
+
+struct ProfitCenter: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var code: String
+    var name: String
+    var description: String?
+    var isActive: Bool
+    var userId: String?
+    
+    static let databaseTableName = "profit_centers"
+    static let user = belongsTo(UserV2.self)
+}
+
+// MARK: - Business Area
+
+struct BusinessArea: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var code: String
+    var name: String
+    var description: String?
+    var isActive: Bool
+    var userId: String?
+    
+    static let databaseTableName = "business_areas"
+    static let user = belongsTo(UserV2.self)
+}
+
+// MARK: - Journal Entry (G/L Line Item - BSEG) (V2)
+
+struct JournalEntryDataV2: Codable, FetchableRecord, PersistableRecord {
+    var id: Int64?
+    var transactionId: Int64                // Link to Transaction (header)
+    var lineItemNumber: Int
+    var accountId: Int64                    // G/L Account
+    var postingKeyId: Int64                 // Posting key determines debit/credit
+    var amountFC: Double                    // Amount in foreign/transaction currency
+    var amountBC: Double                    // Amount in base/local currency
+    var costCenterId: Int64?
+    var profitCenterId: Int64?
+    var businessAreaId: Int64?
+    var clearsLineItemId: Int64?            // Reference to line item this clears
+    var openItemStatus: String              // OpenItemStatus enum
+    
+    static let databaseTableName = "journal_entries_v2"
+    
+    static let transaction = belongsTo(TransactionData.self)
+    static let account = belongsTo(Account.self)
+    static let postingKey = belongsTo(PostingKey.self)
+    static let costCenter = belongsTo(CostCenter.self)
+    static let profitCenter = belongsTo(ProfitCenter.self)
+    static let businessArea = belongsTo(BusinessArea.self)
+    static let clearedByLine = belongsTo(JournalEntryDataV2.self, key: "clearsLineItemId")
+}
+
+// MARK: - Inventory Item (V2)
+
+struct InventoryItemDataV2: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var productCode: String
+    var name: String
+    var itemDescription: String
+    var displayName: String
+    var unitId: String
+    var valuationClassId: String?
+    var salesAccountId: Int64?              // G/L Account for sales
+    var cogsAccountId: Int64?               // G/L Account for COGS
+    var inventoryAccountId: Int64?          // G/L Account for inventory
+    var salesPrice: Double
+    var purchasePrice: Double
+    var availableQuantity: Int
+    var timestamp: Date
+    var userId: String?
+    
+    static let databaseTableName = "inventory_items_v2"
+    
+    static let user = belongsTo(UserV2.self)
+    static let salesAccount = belongsTo(Account.self)
+    static let cogsAccount = belongsTo(Account.self)
+    static let inventoryAccount = belongsTo(Account.self)
+}
+
+// MARK: - Unit (V2)
+
+struct UnitDataV2: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var name: String
+    var unitDescription: String
+    var created: Date?
+    var userId: String?
+    
+    static let databaseTableName = "units_v2"
+    static let user = belongsTo(UserV2.self)
+}
+
+// MARK: - Valuation Class (V2)
+
+struct ValuationClassDataV2: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var classCode: String
+    var name: String
+    var classDescription: String?
+    var inventoryAccountId: Int64
+    var cogsAccountId: Int64
+    var isActive: Bool
+    var createdAt: Date?
+    var updatedAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "valuation_classes_v2"
+    
+    static let user = belongsTo(UserV2.self)
+    static let inventoryAccount = belongsTo(Account.self)
+    static let cogsAccount = belongsTo(Account.self)
+}
+
+// MARK: - Legacy V1 Models (Used by current services)
+// These models maintain the original flat structure for backward compatibility
+
+// MARK: - User Model (V1)
+
+struct User: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var email: String
+    var passwordHash: String
+    var createdAt: Date
+    
+    static let databaseTableName = "users"
+    
+    // Define relationships
+    static let companyProfile = hasOne(CompanyProfileData.self)
+    static let chartOfAccounts = hasMany(ChartOfAccountData.self)
+    static let businessPartners = hasMany(BusinessPartnerData.self)
+    static let sales = hasMany(SaleData.self)
+    static let purchases = hasMany(PurchaseData.self)
+    static let inventoryItems = hasMany(InventoryItemData.self)
+    static let units = hasMany(UnitData.self)
+    static let valuationClasses = hasMany(ValuationClassData.self)
+    static let incomingPayments = hasMany(IncomingPaymentData.self)
+    static let outgoingPayments = hasMany(OutgoingPaymentData.self)
+    static let invoices = hasMany(InvoiceData.self)
+    static let journalEntries = hasMany(JournalEntryData.self)
+}
+
+// MARK: - Company Profile
+
+struct CompanyProfileData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var name: String
+    var mobile: String
+    var crNumber: String
+    var address: String
+    var currencyCode: String
+    var currencySymbol: String
+    var numberFormat: String
+    var isSetupComplete: Bool
+    var userId: String?
+    
+    static let databaseTableName = "company_profiles"
+    
+    static let user = belongsTo(User.self)
+}
+
+// MARK: - Chart of Account
+
+struct ChartOfAccountData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var accountCode: String
+    var accountName: String
+    var accountTypeRaw: String
+    var parentAccountId: String?
+    var balance: Double
+    var isActive: Bool
+    var accountDescription: String?
+    var level: Int
+    var createdAt: Date?
+    var updatedAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "chart_of_accounts"
+    
+    static let user = belongsTo(User.self)
+}
+
+// MARK: - Business Partner
+
+struct BusinessPartnerData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var partnerCode: String
+    var name: String
+    var typeRaw: String
+    var balance: Double
+    var lastTransactionDate: Date
+    var accountId: String
+    var firstName: String?
+    var lastName: String?
+    var email: String?
+    var phone: String?
+    var mobile: String?
+    var website: String?
+    var address: String?
+    var city: String?
+    var state: String?
+    var postalCode: String?
+    var country: String?
+    var taxId: String?
+    var vatNumber: String?
+    var creditLimit: Double?
+    var paymentTerms: Int?
+    var discount: Double?
+    var isActive: Bool
+    var notes: String?
+    var createdAt: Date?
+    var updatedAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "business_partners"
+    
+    static let user = belongsTo(User.self)
+}
+
+// MARK: - Sale
+
+struct SaleData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var saleNumber: String
+    var customerId: String
+    var customerName: String
+    var saleDate: Date
+    var dueDate: Date?
+    var statusRaw: String
+    var subtotal: Double
+    var taxAmount: Double
+    var discountAmount: Double
+    var totalAmount: Double
+    var paidAmount: Double
+    var notes: String?
+    var paymentMethod: String?
+    var referenceNumber: String?
+    var createdAt: Date?
+    var updatedAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "sales"
+    
+    static let user = belongsTo(User.self)
+    static let items = hasMany(SaleItemData.self)
+}
+
+struct SaleItemData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var itemId: String
+    var itemName: String
+    var itemDescription: String?
+    var quantity: Double
+    var unitPrice: Double
+    var taxRate: Double
+    var discountPercent: Double
+    var saleId: String?
+    
+    static let databaseTableName = "sale_items"
+    
+    static let sale = belongsTo(SaleData.self)
+}
+
+// MARK: - Purchase
+
+struct PurchaseData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var purchaseNumber: String
+    var vendorId: String
+    var vendorName: String
+    var purchaseDate: Date
+    var dueDate: Date?
+    var statusRaw: String
+    var subtotal: Double
+    var taxAmount: Double
+    var discountAmount: Double
+    var totalAmount: Double
+    var paidAmount: Double
+    var notes: String?
+    var paymentMethod: String?
+    var referenceNumber: String?
+    var createdAt: Date?
+    var updatedAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "purchases"
+    
+    static let user = belongsTo(User.self)
+    static let items = hasMany(PurchaseItemData.self)
+}
+
+struct PurchaseItemData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var itemId: String
+    var itemName: String
+    var itemDescription: String?
+    var quantity: Double
+    var unitPrice: Double
+    var taxRate: Double
+    var discountPercent: Double
+    var purchaseId: String?
+    
+    static let databaseTableName = "purchase_items"
+    
+    static let purchase = belongsTo(PurchaseData.self)
+}
+
+// MARK: - Inventory
+
+struct InventoryItemData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var productCode: String
+    var name: String
+    var itemDescription: String
+    var displayName: String
+    var unitId: String
+    var valuationClassId: String?
+    var salesPrice: Double
+    var purchasePrice: Double
+    var availableQuantity: Int
+    var timestamp: Date
+    var userId: String?
+    
+    static let databaseTableName = "inventory_items"
+    
+    static let user = belongsTo(User.self)
+}
+
+struct UnitData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var name: String
+    var unitDescription: String
+    var created: Date?
+    var userId: String?
+    
+    static let databaseTableName = "units"
+    
+    static let user = belongsTo(User.self)
+}
+
+// MARK: - Valuation Class
+
+struct ValuationClassData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var classCode: String
+    var name: String
+    var classDescription: String?
+    var inventoryAccountId: String
+    var cogsAccountId: String
+    var isActive: Bool
+    var createdAt: Date?
+    var updatedAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "valuation_classes"
+    
+    static let user = belongsTo(User.self)
+}
+
+// MARK: - Invoice
+
+struct InvoiceData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var invoiceNumber: String
+    var customerId: String
+    var customerName: String
+    var invoiceDate: Date
+    var totalAmount: Double
+    var createdAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "invoices"
+    
+    static let user = belongsTo(User.self)
+    static let items = hasMany(InvoiceItemData.self)
+}
+
+struct InvoiceItemData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var name: String
+    var quantity: Int
+    var unitPrice: Double
+    var invoiceId: String?
+    
+    static let databaseTableName = "invoice_items"
+    
+    static let invoice = belongsTo(InvoiceData.self)
+}
+
+// MARK: - Journal Entry
+
+struct JournalEntryData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var entryNumber: String
+    var date: Date
+    var entryDescription: String
+    var createdAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "journal_entries"
+    
+    static let user = belongsTo(User.self)
+    static let lineItems = hasMany(JournalLineItemData.self)
+}
+
+struct JournalLineItemData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var accountId: String
+    var accountName: String
+    var typeRaw: String
+    var amount: Double
+    var memo: String?
+    var journalEntryId: String?
+    
+    static let databaseTableName = "journal_line_items"
+    
+    static let journalEntry = belongsTo(JournalEntryData.self)
+}
+
+// MARK: - Incoming Payment
+
+struct IncomingPaymentData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var paymentNumber: String
+    var amount: Double
+    var date: Date
+    var customerId: String
+    var customerName: String
+    var receivedInAccountId: String
+    var notes: String?
+    var referenceNumber: String?
+    var createdAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "incoming_payments"
+    
+    static let user = belongsTo(User.self)
+}
+
+// MARK: - Outgoing Payment
+
+struct OutgoingPaymentData: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var paymentNumber: String
+    var amount: Double
+    var date: Date
+    var vendorId: String
+    var vendorName: String
+    var paidFromAccountId: String
+    var notes: String?
+    var referenceNumber: String?
+    var createdAt: Date?
+    var userId: String?
+    
+    static let databaseTableName = "outgoing_payments"
+    
+    static let user = belongsTo(User.self)
+}
